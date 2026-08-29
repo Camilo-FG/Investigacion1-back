@@ -8,4 +8,6 @@ public class User
     public string Role { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
     public DateTime SubscriptionExpirationDate { get; set; }
+
+    public ICollection<RefreshSession> RefreshSessions { get; set; } = new List<RefreshSession>();
 }

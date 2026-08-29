@@ -1,4 +1,5 @@
 using Investigacion1_back.Features.Auth.Register;
+using Investigacion1_back.Shared.Auth;
 using Investigacion1_back.Shared.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddSingleton<PasswordService>();
+builder.Services.AddJwtAccessTokenValidation(builder.Configuration);
 builder.Services.AddScoped<RegisterHandler>();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -24,6 +26,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
