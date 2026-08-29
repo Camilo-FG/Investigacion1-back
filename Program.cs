@@ -1,3 +1,4 @@
+using Investigacion1_back.Features.Auth.Login;
 using Investigacion1_back.Features.Auth.Register;
 using Investigacion1_back.Shared.Auth;
 using Investigacion1_back.Shared.Infrastructure;
@@ -10,6 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddJwtAccessTokenValidation(builder.Configuration);
+builder.Services.AddScoped<LoginHandler>();
 builder.Services.AddScoped<RegisterHandler>();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -30,6 +32,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+LoginEndpoint.Map(app);
 RegisterEndpoint.Map(app);
 
 app.Run();
