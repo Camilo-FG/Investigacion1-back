@@ -1,3 +1,4 @@
+using Investigacion1_back.Features.Auth.AdminRegister;
 using Investigacion1_back.Features.Auth.Login;
 using Investigacion1_back.Features.Auth.Register;
 using Investigacion1_back.Shared.Auth;
@@ -13,6 +14,7 @@ builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddJwtAccessTokenValidation(builder.Configuration);
 builder.Services.AddScoped<LoginHandler>();
 builder.Services.AddScoped<RegisterHandler>();
+builder.Services.AddScoped<AdminRegisterHandler>();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -34,5 +36,6 @@ app.UseAuthorization();
 app.MapControllers();
 LoginEndpoint.Map(app);
 RegisterEndpoint.Map(app);
+AdminRegisterEndpoint.Map(app);
 
 app.Run();
