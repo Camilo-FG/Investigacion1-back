@@ -3,6 +3,10 @@ using Investigacion1_back.Features.Auth.Login;
 using Investigacion1_back.Features.Auth.Logout;
 using Investigacion1_back.Features.Auth.Refresh;
 using Investigacion1_back.Features.Auth.Register;
+using Investigacion1_back.Features.Reservations.CreateReservation;
+using Investigacion1_back.Features.Reservations.GetReservations;
+using Investigacion1_back.Features.Rooms.CreateRoom;
+using Investigacion1_back.Features.Rooms.GetRooms;
 using Investigacion1_back.Features.Users.GetMe;
 using Investigacion1_back.Features.Users.GetUserById;
 using Investigacion1_back.Features.Users.GetUsers;
@@ -29,6 +33,10 @@ builder.Services.AddScoped<GetUsersHandler>();
 builder.Services.AddScoped<GetUserByIdHandler>();
 builder.Services.AddScoped<UpdateUserStatusHandler>();
 builder.Services.AddScoped<UpdateSubscriptionExpirationHandler>();
+builder.Services.AddScoped<CreateReservationHandler>();
+builder.Services.AddScoped<GetReservationsHandler>();
+builder.Services.AddScoped<CreateRoomHandler>();
+builder.Services.AddScoped<GetRoomsHandler>();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -59,5 +67,9 @@ GetUsersEndpoint.Map(app);
 GetUserByIdEndpoint.Map(app);
 UpdateUserStatusEndpoint.Map(app);
 UpdateSubscriptionExpirationEndpoint.Map(app);
+CreateReservationEndpoint.Map(app);
+GetReservationsEndpoint.Map(app);
+CreateRoomEndpoint.Map(app);
+GetRoomsEndpoint.Map(app);
 
 app.Run();
