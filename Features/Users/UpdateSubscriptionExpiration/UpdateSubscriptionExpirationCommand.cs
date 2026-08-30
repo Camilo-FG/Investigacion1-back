@@ -1,0 +1,3 @@
+namespace Investigacion1_back.Features.Users.UpdateSubscriptionExpiration;
+
+public sealed record UpdateSubscriptionExpirationCommand(Guid UserId, DateTime NewExpirationDate);
