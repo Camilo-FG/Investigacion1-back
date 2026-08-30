@@ -1,0 +1,3 @@
+namespace Investigacion1_back.Features.Reservations.GetReservations;
+
+public sealed record GetReservationsQuery;
