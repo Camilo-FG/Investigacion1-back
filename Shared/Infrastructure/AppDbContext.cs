@@ -11,6 +11,8 @@ public class AppDbContext : DbContext
 
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
+    public DbSet<Room> Rooms => Set<Room>();
+    public DbSet<Reservation> Reservations => Set<Reservation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,6 +33,35 @@ public class AppDbContext : DbContext
             entity.HasOne(session => session.User)
                 .WithMany(user => user.RefreshSessions)
                 .HasForeignKey(session => session.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Room>(entity =>
+        {
+            entity.HasKey(room => room.Id);
+            entity.HasIndex(room => room.Number).IsUnique();
+            entity.Property(room => room.Number).HasMaxLength(16).IsRequired();
+            entity.Property(room => room.Type).HasMaxLength(24).HasConversion<string>();
+            entity.Property(room => room.Floor).IsRequired();
+            entity.Property(room => room.Capacity).IsRequired();
+            entity.Property(room => room.BasePricePerNight).IsRequired();
+            entity.HasMany(room => room.Reservations)
+                .WithOne(reservation => reservation.Room)
+                .HasForeignKey(reservation => reservation.RoomId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Reservation>(entity =>
+        {
+            entity.HasKey(reservation => reservation.Id);
+            entity.Property(reservation => reservation.GuestName).HasMaxLength(128).IsRequired();
+            entity.Property(reservation => reservation.CheckInDate).IsRequired();
+            entity.Property(reservation => reservation.CheckOutDate).IsRequired();
+            entity.Property(reservation => reservation.Guests).IsRequired();
+            entity.Property(reservation => reservation.TotalPrice).IsRequired();
+            entity.HasOne(reservation => reservation.Room)
+                .WithMany(room => room.Reservations)
+                .HasForeignKey(reservation => reservation.RoomId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
