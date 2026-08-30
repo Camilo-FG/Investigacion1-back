@@ -6,6 +6,7 @@ using Investigacion1_back.Features.Auth.Register;
 using Investigacion1_back.Features.Users.GetMe;
 using Investigacion1_back.Features.Users.GetUserById;
 using Investigacion1_back.Features.Users.GetUsers;
+using Investigacion1_back.Features.Users.UpdateUserStatus;
 using Investigacion1_back.Shared.Auth;
 using Investigacion1_back.Shared.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +26,7 @@ builder.Services.AddScoped<LogoutHandler>();
 builder.Services.AddScoped<GetMeHandler>();
 builder.Services.AddScoped<GetUsersHandler>();
 builder.Services.AddScoped<GetUserByIdHandler>();
+builder.Services.AddScoped<UpdateUserStatusHandler>();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -53,5 +55,6 @@ LogoutEndpoint.Map(app);
 GetMeEndpoint.Map(app);
 GetUsersEndpoint.Map(app);
 GetUserByIdEndpoint.Map(app);
+UpdateUserStatusEndpoint.Map(app);
 
 app.Run();
