@@ -16,6 +16,8 @@ using Investigacion1_back.Shared.Auth;
 using Investigacion1_back.Shared.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
+DotEnv.Load();
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -38,7 +40,7 @@ builder.Services.AddScoped<GetReservationsHandler>();
 builder.Services.AddScoped<CreateRoomHandler>();
 builder.Services.AddScoped<GetRoomsHandler>();
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(ResolveConnectionString(builder.Configuration)));
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -73,3 +75,14 @@ CreateRoomEndpoint.Map(app);
 GetRoomsEndpoint.Map(app);
 
 app.Run();
+
+static string ResolveConnectionString(IConfiguration configuration)
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
+    var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
+    if (string.IsNullOrWhiteSpace(password))
+        throw new InvalidOperationException("POSTGRES_PASSWORD is not set. Add it to your .env file.");
+
+    return connectionString.Replace("[YOUR-PASSWORD]", password, StringComparison.Ordinal);
+}
