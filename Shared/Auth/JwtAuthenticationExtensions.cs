@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using System.Text;
+using Investigacion1_back.Shared.Contracts;
+using Investigacion1_back.Shared.Domain;
 using Investigacion1_back.Shared.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -40,9 +42,31 @@ public static class JwtAuthenticationExtensions
                     RoleClaimType = ClaimTypes.Role,
                     NameClaimType = ClaimTypes.NameIdentifier
                 };
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnChallenge = async context =>
+                    {
+                        context.HandleResponse();
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        context.Response.ContentType = "application/json";
+                        await context.Response.WriteAsJsonAsync(
+                            new ErrorResponse("Authentication is required."));
+                    },
+                    OnForbidden = async context =>
+                    {
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        context.Response.ContentType = "application/json";
+                        await context.Response.WriteAsJsonAsync(
+                            new ErrorResponse("Insufficient permissions."));
+                    }
+                };
             });
 
-        services.AddAuthorization();
+        services.AddAuthorization(authorization =>
+            authorization.AddPolicy(AuthPolicies.AdminOnly, policy =>
+                policy.RequireRole(Roles.Admin)));
+
         services.AddSingleton<JwtTokenService>();
         return services;
     }
