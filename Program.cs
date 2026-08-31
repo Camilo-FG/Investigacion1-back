@@ -17,54 +17,15 @@ using Investigacion1_back.Shared.Domain;
 using Investigacion1_back.Shared.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
-<<<<<<< HEAD
 DotEnv.Load();
-=======
-// Load .env file
-var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
-if (File.Exists(envPath))
-{
-    Console.WriteLine($"✅ Loading .env from: {envPath}");
-    var lines = File.ReadAllLines(envPath);
-    foreach (var line in lines)
-    {
-        if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#"))
-            continue;
-        
-        var index = line.IndexOf('=');
-        if (index > 0)
-        {
-            var key = line.Substring(0, index).Trim();
-            var value = line.Substring(index + 1).Trim();
-            Environment.SetEnvironmentVariable(key, value);
-            Console.WriteLine($"  → {key}={value.Substring(0, Math.Min(20, value.Length))}...");
-        }
-    }
-    Console.WriteLine("✅ .env loaded successfully!\n");
-}
->>>>>>> 6e65af34526ca48b21bcc08606391ac37001a0ad
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Build connection string from environment variables
-var dbHost = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
-var dbPort = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
-var dbName = Environment.GetEnvironmentVariable("DB_NAME") ?? "postgres";
-var dbUser = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres";
-var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "";
-
-Console.WriteLine("\n📊 Database Configuration:");
-Console.WriteLine($"  Host: {dbHost}");
-Console.WriteLine($"  Port: {dbPort}");
-Console.WriteLine($"  Database: {dbName}");
-Console.WriteLine($"  User: {dbUser}");
-Console.WriteLine($"  Password: {'*' * Math.Max(1, dbPassword.Length)}\n");
-
-var connectionString = $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPassword};SSL Mode=Require;Trust Server Certificate=true";
-
-// Update JWT Secret from environment
-var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? "REDACTED";
-builder.Configuration["Jwt:Secret"] = jwtSecret;
+var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET");
+if (!string.IsNullOrWhiteSpace(jwtSecret))
+{
+    builder.Configuration["Jwt:Secret"] = jwtSecret;
+}
 
 // Add services to the container.
 
@@ -93,11 +54,7 @@ builder.Services.AddScoped<GetReservationsHandler>();
 builder.Services.AddScoped<CreateRoomHandler>();
 builder.Services.AddScoped<GetRoomsHandler>();
 builder.Services.AddDbContext<AppDbContext>(options =>
-<<<<<<< HEAD
     options.UseNpgsql(ResolveConnectionString(builder.Configuration)));
-=======
-    options.UseNpgsql(connectionString));
->>>>>>> 6e65af34526ca48b21bcc08606391ac37001a0ad
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -114,7 +71,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173","http://localhost:5173", "http://localhost:5174")
+        policy.WithOrigins(
+                  "http://localhost:5173",
+                  "http://localhost:5174",
+                  "http://localhost:5175")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -153,21 +113,6 @@ GetReservationsEndpoint.Map(app);
 CreateRoomEndpoint.Map(app);
 GetRoomsEndpoint.Map(app);
 
-// Development-only endpoint to change user roles (REMOVE IN PRODUCTION!)
-if (app.Environment.IsDevelopment())
-{
-    app.MapPost("/dev/users/{userId}/role", async (Guid userId, string role, AppDbContext db) =>
-    {
-        var user = await db.Users.FindAsync(userId);
-        if (user == null)
-            return Results.NotFound($"User {userId} not found");
-
-        user.Role = role;
-        await db.SaveChangesAsync();
-        return Results.Ok($"User {user.Email} role updated to {role}");
-    }).WithName("DevChangeUserRole").WithOpenApi().ExcludeFromDescription();
-}
-
 // Seed admin user if none exists
 using (var scope = app.Services.CreateScope())
 {
@@ -188,7 +133,7 @@ using (var scope = app.Services.CreateScope())
         };
         db.Users.Add(admin);
         await db.SaveChangesAsync();
-        Console.WriteLine($"✅ Admin user seeded: {adminEmail}");
+        Console.WriteLine($"Admin user seeded: {adminEmail}");
     }
 }
 

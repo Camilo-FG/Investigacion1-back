@@ -121,11 +121,12 @@ Todos los errores usan un `ErrorResponse` consistente: `{ "error": "<mensaje>" }
 
 ## Configuración
 
-Copiar `appsettings.Example.json` a `appsettings.json` (o usar variables de entorno) y definir `Jwt:Secret` (mínimo 32 caracteres). La conexión a la base va por user-secrets (no se versiona):
+Copiar `.env.example` a `.env` y definir al menos:
 
-```bash
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=aws-0-<region>.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.<ref>;Password=<password>;SslMode=Require;Trust Server Certificate=true"
-```
+- `POSTGRES_PASSWORD` — contraseña de Supabase
+- `JWT_SECRET` — mínimo 32 caracteres (no versionar)
+
+La connection string va en `appsettings.Development.json` con el placeholder `[YOUR-PASSWORD]`; el backend lo reemplaza con `POSTGRES_PASSWORD` al iniciar.
 
 Correr la API:
 
