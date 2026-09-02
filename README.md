@@ -1,78 +1,72 @@
-# Investigación 1 — Backend (Autenticación + RBAC)
+# Investigación 1 — Autenticación, RBAC y dominio Hotel
 
-Backend en **.NET 10 (minimal APIs)** con arquitectura **Vertical Slice** y separación **Command/Query (CQRS)**. Persistencia con **EF Core + PostgreSQL**.
+Backend **.NET 10 (minimal APIs)** + frontend **React/Vite**. Arquitectura **Vertical Slice** con **CQRS** (Command/Query). Persistencia **EF Core + PostgreSQL (Supabase)**.
 
-## Estructura
+## Arquitectura (patrón del equipo)
+
+Se eligió **Vertical Slice** como base común:
+
+- Cada caso de uso vive en su carpeta (`Features/<Area>/<UseCase>/`) con Endpoint + Handler + Request/Command/Query.
+- Escrituras = **Commands**; lecturas = **Queries**.
+- Código transversal en `Shared/` (Domain, Auth, Infrastructure, Contracts).
 
 ```
 Features/
-├── Auth/                  # Persona 1 — autenticación
-│   ├── Login, Register, AdminRegister, Refresh, Logout
-├── Users/                 # Persona 2 — RBAC y reglas de negocio
-│   ├── GetMe                    (Query)   GET /users/me
-│   ├── GetUsers                 (Query)   GET /users
-│   ├── GetUserById              (Query)   GET /users/{id}
-│   ├── UpdateUserStatus         (Command) PATCH /users/{id}/status
-│   └── UpdateSubscriptionExpiration (Command) PATCH /users/{id}/subscription-expiration
-└── Reservations & Rooms/  # Persona 3 — dominio propio (Hotel)
-    ├── CreateReservation        (Command) POST /reservations
-    ├── GetReservations          (Query)   GET /reservations
-    ├── CreateRoom               (Command) POST /rooms
-    └── GetRooms                 (Query)   GET /rooms
+├── Auth/           # Persona 1 — login, register, refresh, logout
+├── Users/          # Persona 2 — RBAC y reglas de negocio
+├── Rooms/          # Persona 3 — dominio propio
+└── Reservations/   # Persona 3 — dominio propio
+frontend/           # Persona 4 — UI + integración + demo
 ```
 
-## Autenticación (Persona 1)
+---
 
-| Método | Ruta              | Acceso          | Descripción                          |
-| ------ | ----------------- | --------------- | ----------------------------------- |
-| POST   | `/register`       | Público         | Registra un `Subscription_L1`.      |
-| POST   | `/login`          | Público         | Emite accessToken + refreshToken.   |
-| POST   | `/admin/register` | 1er Admin o Auth | Crea un `Admin`.                    |
-| POST   | `/refresh`        | Refresh token   | Rota refresh y emite nuevo access.  |
-| POST   | `/logout`         | Autenticado     | Revoca las sesiones refresh.        |
+## Persona 1 — Autenticación y sesiones
 
-Roles válidos: `Admin` y `Subscription_L1`. No existe endpoint para cambiar el rol de un usuario.
+| Método | Ruta | Acceso | Descripción |
+| ------ | ---- | ------ | ----------- |
+| POST | `/register` | Público | Registra un `Subscription_L1`. |
+| POST | `/login` | Público | Emite `accessToken` (~1h) + `refreshToken` (~14 días). |
+| POST | `/admin/register` | 1er Admin o Auth | Crea un `Admin`. |
+| POST | `/refresh` | Refresh token | Rota refresh y emite nuevo access. |
+| POST | `/logout` | Autenticado | Revoca sesiones refresh del usuario. |
 
-## Endpoints de usuarios — RBAC (Persona 2)
+- Contraseñas hasheadas; política: mín. 6 caracteres, letra + número.
+- Credenciales inválidas o `IsActive=false` → **401**.
+- Tras logout, el refresh anterior deja de funcionar.
 
-| Método | Ruta                                 | Acceso                        | Regla de negocio aplicada                                         |
-| ------ | ------------------------------------ | ----------------------------- | ----------------------------------------------------------------- |
-| GET    | `/users/me`                          | Cualquier usuario autenticado | Devuelve los datos del usuario del token.                         |
-| GET    | `/users`                             | Solo `Admin`                  | Lista todos los usuarios.                                         |
-| GET    | `/users/{id}`                        | Solo `Admin`                  | Consulta un usuario por id; `404 User not found` si no existe.    |
-| PATCH  | `/users/{id}/status`                 | Solo `Admin`                  | Activa/desactiva un usuario. Véanse reglas especiales abajo.      |
-| PATCH  | `/users/{id}/subscription-expiration`| Solo `Admin`                  | Extiende/modifica la expiración de una suscripción `Subscription_L1`. |
+Roles: `Admin` y `Subscription_L1`. No hay endpoint para cambiar el rol.
 
-## Reglas de negocio
+---
 
-- Endpoint protegido sin token válido → **401 Unauthorized**.
-- Token válido pero rol insuficiente → **403 Forbidden**.
-- `Subscription_L1` con `SubscriptionExpirationDate` vencida → **403** en cualquier endpoint autenticado (middleware global, no endpoint por endpoint).
-- Un Admin **no puede desactivarse a sí mismo** (`PATCH /users/{id}/status` con su propio id → **403**).
-- Un Admin **no puede desactivar al último Admin activo** del sistema (**403**).
-- La ruta de activar/desactivar es **independiente** de la ruta de expiración de suscripción.
-- No existe endpoint para cambiar el rol de un usuario.
+## Persona 2 — RBAC + reglas de negocio
 
-## Dominio propio — Hotel (Persona 3)
+| Método | Ruta | Acceso | Regla |
+| ------ | ---- | ------ | ----- |
+| GET | `/users/me` | Autenticado | Perfil del token. |
+| GET | `/users` | Admin | Lista usuarios. |
+| GET | `/users/{id}` | Admin | Usuario por id (`404` si no existe). |
+| PATCH | `/users/{id}/status` | Admin | Activar/desactivar. |
+| PATCH | `/users/{id}/subscription-expiration` | Admin | Actualizar expiración de `Subscription_L1`. |
 
-Dominio de negocio del equipo: **reservas de hotel**. Dos entidades relacionadas, distintas al módulo de autenticación:
+Reglas:
 
-- **Rooms** (habitación): `Number` (único), `Type` (Single/Double/Suite), `Floor`, `Capacity`, `BasePricePerNight`.
-- **Reservations** (reserva): `RoomId` (FK → Rooms), `GuestName`, `CheckInDate`, `CheckOutDate`, `Guests`, `TotalPrice`.
+- Sin token válido → **401**. Token válido, rol insuficiente → **403**.
+- `Subscription_L1` con suscripción vencida → **403** (middleware global).
+- Un Admin **no** puede desactivarse a sí mismo ni al **último Admin activo**.
+- Rutas de status y expiración son independientes.
 
-**Relación elegida (1:N)**: *una habitación tiene muchas reservas; cada reserva pertenece a una habitación*. Tiene sentido para el problema porque una habitación opera con períodos disjuntos de ocupación, y cada reserva siempre referencia exactamente un cuarto. Permite demostrar la relación en lecturas (reserva → datos del cuarto) y es coherente con el módulo de suscripciones (un `Subscription_L1` reserva; el `Admin` administra).
+---
 
-### Diagrama de entidades
+## Persona 3 — Dominio Hotel + Supabase
+
+Entidades propias (1:N): **Rooms** ← **Reservations**.
 
 ```
 Rooms (1) ────────────────< Reservations (N)
-id            (PK)          id             (PK)
-number        (UNIQUE)      room_id        (FK → Rooms.id)
-type                       guest_name
-floor                      check_in_date
-capacity                   check_out_date
-base_price_per_night       guests
-                            total_price
+id, number (UK), type,      id, room_id (FK), guest_name,
+floor, capacity,            check_in/out, guests, total_price
+base_price_per_night
 ```
 
 ```mermaid
@@ -97,45 +91,76 @@ erDiagram
   }
 ```
 
-Ahora bien, las tablas de autenticación en resumen: `Users` y `RefreshSessions` se relacionan 1:N (un usuario posee varias sesiones de refresh), con índices únicos en `Email` y `TokenHash`.
+Auth: `Users` 1:N `RefreshSessions` (índices únicos en `Email` y `TokenHash`).
 
-### Endpoints del dominio (CQRS)
+| Método | Ruta | Acceso | CQRS | Notas |
+| ------ | ---- | ------ | ---- | ----- |
+| POST | `/rooms` | Admin | Command | Número único; precio > 0. |
+| GET | `/rooms` | Autenticado | Query | Listado para reservar. |
+| POST | `/reservations` | Autenticado | Command | Fechas válidas, capacidad, sin solape (409), precio calculado. |
+| GET | `/reservations` | Admin | Query | Incluye datos de la habitación. |
 
-| Método | Ruta              | Acceso         | Operación                  | Reglas de negocio                                                                                              |
-| ------ | ----------------- | -------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| POST   | `/reservations`   | Autenticado    | **Command** `CreateReservation` | `CheckOut > CheckIn` (400) · `1 ≤ Guests ≤ capacidad` (400) · sin superposición con el mismo cuarto (409) · `TotalPrice = noches × BasePricePerNight` |
-| GET    | `/reservations`   | Solo `Admin`   | **Query** `GetReservations`    | Lectura relacionada: cada reserva incluye los datos de su habitación (`Include(Room)`)                          |
-| POST   | `/rooms`          | Solo `Admin`   | **Command** `CreateRoom`       | `Number` único (400) · `BasePricePerNight > 0` (400)                                                            |
-| GET    | `/rooms`          | Autenticado    | **Query** `GetRooms`           | Lista habitaciones (flujo del frontend: elegir cuarto y reservar)                                               |
-
-### Migraciones y Supabase
-
-- Migración **`Initial`** versionada en `Migrations/` (una sola migración que crea auth + dominio).
-- Aplicada con `dotnet ef database update` contra el proyecto Supabase del equipo.
-- La conexión va por **user-secrets** (`ConnectionStrings:DefaultConnection`), nunca versionada.
-- Se usa el **session pooler** de Supabase (`aws-0-<región>.pooler.supabase.com:5432`, usuario `postgres.<ref>`): el transaction pooler (6543) no soporta migraciones de EF Core.
-
-## Formato de error
-
-Todos los errores usan un `ErrorResponse` consistente: `{ "error": "<mensaje>" }`.
-
-## Configuración
-
-Copiar `.env.example` a `.env` y definir al menos:
-
-- `POSTGRES_PASSWORD` — contraseña de Supabase
-- `JWT_SECRET` — mínimo 32 caracteres (no versionar)
-
-La connection string va en `appsettings.Development.json` con el placeholder `[YOUR-PASSWORD]`; el backend lo reemplaza con `POSTGRES_PASSWORD` al iniciar.
-
-Correr la API:
-
-```bash
-dotnet run
-```
-
-Reconstruir la base desde las migraciones del repo:
+Migración `Initial` en `Migrations/` (auth + dominio). Aplicar:
 
 ```bash
 dotnet ef database update
 ```
+
+Usar el **session pooler** de Supabase (`:5432`, usuario `postgres.<ref>`). El transaction pooler (`:6543`) no sirve para migraciones EF.
+
+---
+
+## Persona 4 — Frontend + integración
+
+App en `frontend/` (Vite + React + TypeScript):
+
+- Login con manejo de `accessToken` / `refreshToken` en `localStorage`.
+- **Refresh automático**: ante 401 en una petición autenticada se llama a `POST /refresh` (una sola vez) y se reintenta.
+- Vista protegida `GET /users/me` con menú según rol (Admin ve Reservas / Admin cuartos; `Subscription_L1` no).
+- Dominio: listar habitaciones, crear reserva; Admin crea cuartos y lista reservas.
+- Errores visibles para **401 / 403 / credenciales inválidas**.
+
+### Cómo correr
+
+**Backend**
+
+1. Copiar `.env.example` → `.env` y definir `POSTGRES_PASSWORD` y `JWT_SECRET` (≥ 32 chars).
+2. Connection string en `appsettings.Development.json` con placeholder `[YOUR-PASSWORD]`.
+3. `dotnet ef database update` (si hace falta).
+4. `dotnet run` → API en `http://localhost:5018`.
+5. Si no hay Admin, se siembra `admin@example.com` / `AdminPass1`.
+
+**Frontend**
+
+```bash
+cd frontend
+cp .env.example .env   # VITE_API_BASE_URL=http://localhost:5018
+npm install
+npm run dev            # http://localhost:5173
+```
+
+CORS del backend permite `5173`–`5175`.
+
+Formato de error de la API: `{ "error": "<mensaje>" }`.
+
+---
+
+## Guion de demo (10 minutos)
+
+| Min | Qué mostrar | Quién / endpoint |
+| --- | ----------- | ---------------- |
+| 0:00–1:00 | Estructura Vertical Slice + diagrama Rooms↔Reservations | README / carpeta `Features/` |
+| 1:00–2:30 | Login Admin (`admin@example.com`). Mostrar tokens en Network. Fallar login (mal password → 401). | Persona 1 + 4 |
+| 2:30–4:00 | Perfil `GET /users/me`. Menú Admin visible. Mencionar access ~1h / refresh ~14d y logout que revoca. | Persona 1 + 4 |
+| 4:00–5:30 | Admin crea habitación (`POST /rooms`). Listar (`GET /rooms`). Crear reserva. | Persona 3 + 4 |
+| 5:30–7:00 | `GET /reservations` (lectura relacionada). Intentar desactivar el propio Admin o el último Admin → 403. | Persona 2 + 3 |
+| 7:00–8:30 | Registrar / login como `Subscription_L1`. Menú sin Admin. Forzar `/reservations` → bloqueo 403 en UI. | Persona 2 + 4 |
+| 8:30–9:30 | Suscripción vencida → 403 global. Refresh automático (expirar access o forzar 401 y ver `POST /refresh`). | Persona 1 + 2 |
+| 9:30–10:00 | Supabase: migración `Initial`, connection pooler, `.env` / secrets. Cierre. | Persona 3 |
+
+Checklist rápido en vivo:
+
+1. Login OK / login inválido (401).
+2. Crear room + reservation.
+3. Rol insuficiente (403).
+4. Logout → refresh viejo falla.
