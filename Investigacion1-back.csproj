@@ -20,4 +20,11 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Investigacion1-back.Tests/**" />
+    <Content Remove="Investigacion1-back.Tests/**" />
+    <None Remove="Investigacion1-back.Tests/**" />
+    <EmbeddedResource Remove="Investigacion1-back.Tests/**" />
+  </ItemGroup>
+
 </Project>

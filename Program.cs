@@ -152,3 +152,5 @@ static string ResolveConnectionString(IConfiguration configuration)
 
     return connectionString.Replace("[YOUR-PASSWORD]", password, StringComparison.Ordinal);
 }
+
+public partial class Program;

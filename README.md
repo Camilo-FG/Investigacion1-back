@@ -134,6 +134,12 @@ Correr la API:
 dotnet run
 ```
 
+Correr tests de autenticación (Persona 1):
+
+```bash
+dotnet test
+```
+
 Reconstruir la base desde las migraciones del repo:
 
 ```bash
