@@ -26,11 +26,16 @@ public sealed class LogoutHandler
         }
 
         var now = DateTime.UtcNow;
-        await _db.RefreshSessions
+        var sessions = await _db.RefreshSessions
             .Where(session => session.UserId == userId && session.RevokedAt == null)
-            .ExecuteUpdateAsync(
-                updates => updates.SetProperty(session => session.RevokedAt, now),
-                cancellationToken);
+            .ToListAsync(cancellationToken);
+
+        foreach (var session in sessions)
+        {
+            session.RevokedAt = now;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
 
         return Results.NoContent();
     }

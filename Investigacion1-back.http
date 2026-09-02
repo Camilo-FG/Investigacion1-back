@@ -1,6 +1,44 @@
 @Investigacion1_back_HostAddress = http://localhost:5018
 
-GET {{Investigacion1_back_HostAddress}}/openapi/v1.json
-Accept: application/json
+### Register (Subscription_L1)
+POST {{Investigacion1_back_HostAddress}}/register
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "Secret1"
+}
+
+### Login
+POST {{Investigacion1_back_HostAddress}}/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "Secret1"
+}
+
+### Refresh
+POST {{Investigacion1_back_HostAddress}}/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### Logout (requires accessToken)
+POST {{Investigacion1_back_HostAddress}}/logout
+Authorization: Bearer {{accessToken}}
+
+### Admin register (first Admin is public; later requires Admin JWT)
+POST {{Investigacion1_back_HostAddress}}/admin/register
+Content-Type: application/json
+
+{
+  "email": "admin2@example.com",
+  "password": "Admin1a"
+}
 
 ###
+GET {{Investigacion1_back_HostAddress}}/openapi/v1.json
+Accept: application/json
