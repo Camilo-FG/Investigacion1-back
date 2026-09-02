@@ -368,4 +368,8 @@ FodyWeavers.xsd
 # Environment variables
 .env
 .env.local
-.env.*.localfrontend/dist/
+.env.*.local
+
+# Frontend build
+frontend/dist/
+
